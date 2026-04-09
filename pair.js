@@ -18,7 +18,7 @@ const {
 
 const config = require('./config');
 
-let makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, delay;
+let makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers;
 
 async function loadBaileys() {
   if (makeWASocket) return;
@@ -27,7 +27,6 @@ async function loadBaileys() {
   useMultiFileAuthState = b.useMultiFileAuthState;
   makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
   Browsers = b.Browsers;
-  delay = b.delay;
 }
 
 const activeSockets = new Map();
@@ -103,6 +102,7 @@ async function setupMessageHandler(socket) {
 
 router.get('/', async (req, res) => {
   const number = String(req.query.number || '').replace(/[^0-9]/g, '');
+
   if (!number || number.length < 7) {
     return res.status(400).json({ error: 'Invalid number' });
   }
@@ -151,18 +151,39 @@ router.get('/', async (req, res) => {
       }
     });
 
-    // ✅ FIXED PAIRING FLOW
+    // ✅ FINAL FIXED PAIRING
     if (!socket.authState.creds.registered) {
-      try {
-        await delay(3000); // give Baileys time to boot
+      let responded = false;
 
-        const code = await socket.requestPairingCode(number);
+      socket.ev.on('connection.update', async (update) => {
+        try {
+          const { connection } = update;
 
-        return res.json({ code });
-      } catch (err) {
-        console.error('Pairing error:', err);
-        return res.status(503).json({ error: 'Failed to generate pairing code' });
-      }
+          if (!responded && (connection === 'connecting' || connection === undefined)) {
+            const code = await socket.requestPairingCode(number);
+
+            responded = true;
+            return res.json({ code });
+          }
+        } catch (err) {
+          console.error('Pairing error:', err);
+
+          if (!responded) {
+            responded = true;
+            return res.status(503).json({ error: 'Pairing failed' });
+          }
+        }
+      });
+
+      // ⛑️ Safety timeout
+      setTimeout(() => {
+        if (!responded) {
+          responded = true;
+          return res.status(503).json({ error: 'Timeout generating code' });
+        }
+      }, 15000);
+
+      return;
     }
 
     return res.json({ code: 'Already Registered' });
