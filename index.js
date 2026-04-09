@@ -1,12 +1,15 @@
 const express = require('express');
-  const app = express();
-  const path = require('path');
-  const PORT = process.env.PORT || 8000;
+const app = express();
+const path = require('path');
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 8000;
 
- app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
- 
-  app.listen(PORT, () => console.log('✅ SATANIC MINI running on port ' + PORT));
-  
+// ROUTES FIRST
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// THEN LISTEN
+app.listen(PORT, () => {
+  console.log('✅ Server running on port ' + PORT);
+});
