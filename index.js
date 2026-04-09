@@ -6,7 +6,7 @@ const express = require('express');
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
- aapp.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
  
   app.listen(PORT, () => console.log('✅ SATANIC MINI running on port ' + PORT));
   
